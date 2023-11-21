@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Styling the whole page-->
+        <style>
+            #info{padding-top:20px;}
+            #countryData{margin-top:25px;}
+            .center{margin-left:25%;}
+            body{background-color: rgb(71, 69, 69);}
+            select, tr:nth-child(even){background-color: lightgrey;}
+            p, div, h1, label{color:lightgrey}
+            select, input, button{border-radius:5px;}
+            button:hover, input:hover, select:hover, tr:nth-child(odd){background-color: rgb(173,173,173);}
+
+            table, td, tr, th{
+                border:1px solid white;
+                border-collapse: collapse;
+                text-align: center;
+            }
+
+            th {
+                background-color: grey;
+                padding:10px;
+            }
+
+            span{
+                background-color:lightgrey;
+                margin-left: 10%;
+                color:black;
+                padding:3px;
+            }
+            
+            img{
+                width:45px;
+                height:30px;
+            }
+        </style>
+
+        <!-- Importing jQuery -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.js"></script>
+
+        <script>
+            //Script for finding the biggest country by area and population, and the number of countries
+            function findStats(index, data, info){
+                // info = [biggestCountry, biggestArea, biggestPopulationCountry, biggestPopulation, numCountries]
+                //Finding the country with the biggest area
+                if(index > 0){
+                    if(data[index].area > info[1]) {info[0] = data[index].name; info[1] = data[index].area}
+                }
+                else{
+                    info[0] = data[index].name
+                    info[1] = data[index].area
+                }
+
+                //Finding the country with the biggest population
+                if(index > 0){
+                    if(data[index].population > info[3]) {info[2] = data[index].name; info[3] = data[index].population}
+                }
+                else{
+                    info[2] = data[index].name
+                    info[3] = data[index].population
+                }
+                info[4] = index + 1
+                return info
+            }
+
+            $(() => {
+                //
+                //Hide search button and text input when region not selected
+                $('#textInput').hide()
+                $('#searchButton').hide()
+
+                //Getting the regions for the select box
+                let url = "https://www.cs.kent.ac.uk/people/staff/yh/api/country-data/countries/regions"
+                $.getJSON(url, (data) => {
+                    $(data).each((index) => {
+                        $('#countrySelection').append('<option id="' + data[index] + '">' + data[index] + "</option>")
+                    })
+
+                    //Add event for the options
+                    $('#countrySelection').on('change', function ()  {
+                        //(Re)setting the information array
+                        let info=[];
+
+                        //Clearing table if no region selected
+                        if($(this).val() ==("Select a Region")){
+                            $('#countryData').empty()
+                            $('#info').empty()
+                        }
+                        else{
+                            url = 'https://www.cs.kent.ac.uk/people/staff/yh/api/country-data/countries/region/' + $(this).val()
+
+                            //Empty previous values
+                            $('#countryData').empty()
+                            $('#info').empty()
+
+                            //Create and add the values into the table
+                            $.getJSON(url, (data) =>{
+                                $('#countryData').append('<tr><th>Country Code</th><th>Country Flag</th><th>Name</th><th>Capitol</th><th>Population</th><th>Area</th><th>Popualtion Density</th></tr>')
+                                $(data).each((index) =>{
+                                    $('#countryData').append('<tr><td>' + data[index].code + '</td>' 
+                                        + '<td><img src="' + data[index].flag + '"/></td><td>'
+                                        + data[index].name + '</td><td>'
+                                        + data[index].capital + '</td><td>' 
+                                        + data[index].population + '</td><td>'
+                                        + data[index].area + '</td><td>'
+                                        + Math.round((data[index].population / data[index].area)*10)/10
+                                        + '</td></tr>')
+
+                                    //Finding the stats
+                                    info = findStats(index, data, info)
+                                })
+
+                                //Add the information on data returned
+                                $('#info').append('<span style="margin-left:0%">Countries returned: ' + info[4] + '</span>')
+                                $('#info').append('<span>Biggest Country: ' + info[0] + '</span>')
+                                $('#info').append('<span>Biggest Population: ' + info[2] + '</span>')
+
+                                //Reset the index in info array
+                                info[4] = 0
+
+                                //Reveal search functionality
+                                $('#textInput').show()
+                                $('#searchButton').show()
+                            })
+                        }
+                    })
+
+                    $('#searchButton').on('click', () => {
+                        //Empty previous results
+                        $('#countryData').empty()
+                        $('#info').empty()
+                        
+                        //Add the titles
+                        $('#countryData').append('<tr><th>Country Code</th><th>Country Flag</th><th>Name</th><th>Capitol</th><th>Population</th><th>Area</th><th>Population Density</th></tr>')
+
+                        //Get new results
+                        let added = false
+                        $.getJSON(url, (data) =>{
+                            $(data).each((index) =>{
+                                added = false
+                                if(data[index].name != null){
+                                    //Checking the country name contains the string input 
+                                    if(data[index].name.toLowerCase().includes($('#textInput').val().toLowerCase())){
+                                        $('#countryData').append('<tr><td>' + data[index].code + '</td>' 
+                                        + '<td><img src="' + data[index].flag + '"/></td><td>'
+                                        + data[index].name + '</td><td>'
+                                        + data[index].capital + '</td><td>' 
+                                        + data[index].population + '</td><td>'
+                                        + data[index].area + '</td><td>'
+                                        + Math.round((data[index].population / data[index].area)*10)/10
+                                        + '</td></tr>')
+
+                                        //Setting the number of countries
+                                        added = true
+                                    }
+                                }
+                                
+                                if(data[index].capital != null && !added){
+                                    //Checking the country capital contains the string input 
+                                    if(data[index].capital.toLowerCase().includes($('#textInput').val().toLowerCase())){
+                                        $('#countryData').append('<tr><td>' + data[index].code + '</td>' 
+                                        + '<td><img src="' + data[index].flag + '"/></td><td>'
+                                        + data[index].name + '</td><td>'
+                                        + data[index].capital + '</td><td>' 
+                                        + data[index].population + '</td><td>'
+                                        + data[index].area + '</td><td>'
+                                        + Math.round((data[index].population / data[index].area)*10)/10
+                                        + '</td></tr>')
+                                    }
+                                }
+                            })
+                            //Add info
+                            /*$('#info').append('<span style="margin-left:0%">Countries returned: ' + numCountries + '</span>')
+                            $('#info').append('<span>Biggest Country: ' + info[0] + '</span>')
+                            $('#info').append('<span>Biggest Population: ' + info[2] + '</span>')*/
+
+                            //Resetting index in info array
+                            info[4] = 0
+                        })
+                    })
+                })
+            })
+        </script>
+    </head>
+
+    <body>
+        <h1 class="center">Information About Countries</h1>
+        <label for="countrySelec">Region selection:</label>
+        <div>
+            <select name="countrySelec" id="countrySelection">
+                <option>Select a Region</option>
+            </select>
+            <input type="text" id="textInput"></input>
+            <button id="searchButton">Search</button> 
+        </div>
+        <div id="info"></div>
+    
+        <table id="countryData"></table>
+    </body>
+</html>
